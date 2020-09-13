@@ -4,48 +4,47 @@ window.onload = function(){
 var fps = 60;
 var boardWidth = 800;
 var boardHeight = 600;
-var playerWidth = 32;
-var playerHeight = 32;
-var bulletWidth = 8;
-var bulletHeight = 8;
-var playerSpeed = 10;
-var bulletSpeed = 30;
 
-// Controls
+// Constants
 var LEFT = 65;
 var UP = 87;
 var RIGHT = 68;
 var DOWN = 83;
 var SPACE = 32;
-var leftPressed = false;
-var upPressed = false;
-var rightPressed = false;
-var downPressed = false;
-var spacePressed = false;
-var mouseX = 0;
-var mouseY = 0;
 
-// Player vars
-var playerX = 0;
-var playerY = 0;
-
-// Bullets
+// Global vars
 var bullets = [];
+var players = [];
 
 var canvas = document.getElementById("myCanvas");
 var ctx = canvas.getContext("2d");
 
 // Class definitions
+class InputState {
+    leftPressed = false;
+    upPressed = false;
+    rightPressed = false;
+    downPressed = false;
+    spacePressed = false;
+    mouseX = 0;
+    mouseY = 0;
+}
+
 class Bullet {
-    constructor() {
-        var velocityX = mouseX - playerX;
-        var velocityY = mouseY - playerY;
+    width = 8;
+    height = 8;
+    speed = 30;
+    colour = "black";
+
+    constructor(player) {
+        var velocityX = player.input.mouseX - player.position.x;
+        var velocityY = player.input.mouseY - player.position.y;
         var hippopotamus = Math.sqrt( velocityX**2 + velocityY**2);
         velocityX /= hippopotamus;
         velocityY /= hippopotamus;
 
-        this.position = { x: playerX, y: playerY };
-        this.velocity = { x: velocityX * bulletSpeed, y: velocityY * bulletSpeed };
+        this.position = { x: player.position.x, y: player.position.y };
+        this.velocity = { x: velocityX * this.speed, y: velocityY * this.speed };
     }
 
     update() {
@@ -58,18 +57,38 @@ class Bullet {
     }
 }
 
-function drawBullet(bullet) {
-    ctx.beginPath();
-    ctx.rect(bullet.position.x, bullet.position.y, bulletWidth, bulletHeight);
-    ctx.fillStyle = "black";
-    ctx.fill();
-    ctx.closePath();
+class Player {
+    width = 32;
+    height = 32;
+    speed = 10;
+    colour = "red";
+
+    constructor(x = 0, y = 0) {
+        this.position = { x: x, y: y };
+        this.velocity = { x: x, y: y };
+        this.input = new InputState();
+    }
+
+    update() {
+        this.position.x -= this.input.leftPressed ? this.speed : 0;
+        this.position.x += this.input.rightPressed ? this.speed : 0;
+        this.position.y -= this.input.upPressed ? this.speed : 0;
+        this.position.y += this.input.downPressed ? this.speed : 0;
+
+        this.position.x = Math.min(Math.max(0, this.position.x), boardWidth);
+        this.position.y = Math.min(Math.max(0, this.position.y), boardHeight);
+
+        // Shoot bullet
+        if (this.input.spacePressed) {
+            bullets.push(new Bullet(this));
+        }
+    }
 }
 
-function drawPlayer() {
+function drawSprite(sprite) {
     ctx.beginPath();
-    ctx.rect(playerX, playerY, playerWidth, playerHeight);
-    ctx.fillStyle = "red";
+    ctx.rect(sprite.position.x, sprite.position.y, sprite.width, sprite.height);
+    ctx.fillStyle = sprite.colour;
     ctx.fill();
     ctx.closePath();
 }
@@ -84,28 +103,13 @@ function drawBoard() {
 
 function draw() {
     drawBoard();
-    drawPlayer();
-    bullets.map(drawBullet);
+    players.map(drawSprite);
+    bullets.map(drawSprite);
 }
 
 // Update functions
-function updatePlayer() {
-    playerX -= leftPressed ? playerSpeed : 0;
-    playerX += rightPressed ? playerSpeed : 0;
-    playerY -= upPressed ? playerSpeed : 0;
-    playerY += downPressed ? playerSpeed : 0;
-
-    playerX = Math.min(Math.max(0, playerX), boardWidth);
-    playerY = Math.min(Math.max(0, playerY), boardHeight);
-
-    // Shoot bullet
-    if (spacePressed) {
-        bullets.push(new Bullet());
-    }
-}
-
-function updateBullet(bullet) {
-    bullet.update();
+function updateSprite(sprite) {
+    sprite.update();
 }
 
 function isBulletIn(bullet) {
@@ -113,8 +117,8 @@ function isBulletIn(bullet) {
 }
 
 function update() {
-    updatePlayer();
-    bullets.map(updateBullet);
+    players.map(updateSprite);
+    bullets.map(updateSprite);
     bullets = bullets.filter(isBulletIn);
 }
 
@@ -126,7 +130,12 @@ function gameLoop() {
     }, 1000 / fps);
 }
 
+// Start game loop
 gameLoop();
+
+// Players
+var humanPlayer = new Player();
+players.push(humanPlayer);
 
 // Controls / Input
 document.addEventListener("keydown", keyDownHandler, false);
@@ -135,45 +144,45 @@ document.addEventListener('mousemove', mouseHandler, false);
 
 function keyDownHandler(e) {
 	if(e.keyCode == LEFT) {
-		leftPressed = true;
+		humanPlayer.input.leftPressed = true;
 	} 
 	else if(e.keyCode == UP) {
-		upPressed = true;
+		humanPlayer.input.upPressed = true;
 	}
 	else if(e.keyCode == DOWN) {
-		downPressed = true;
+		humanPlayer.input.downPressed = true;
 	}
 	else if(e.keyCode == RIGHT) {
-		rightPressed = true;	
+		humanPlayer.input.rightPressed = true;	
 	}
 	else if(e.keyCode == SPACE) {
-		spacePressed = true;
+		humanPlayer.input.spacePressed = true;
 	}
 }
 
 function keyUpHandler(e) {
 	if(e.keyCode == LEFT) {
-		leftPressed = false;
+		humanPlayer.input.leftPressed = false;
 	} 
 	else if(e.keyCode == UP) {
-		upPressed = false;
+		humanPlayer.input.upPressed = false;
 	}
 	else if(e.keyCode == DOWN) {
-		downPressed = false;
+		humanPlayer.input.downPressed = false;
 	}
 	else if(e.keyCode == RIGHT) {
-		rightPressed = false;
+		humanPlayer.input.rightPressed = false;
 	}
 	else if(e.keyCode == SPACE) {
-		spacePressed = false;
+		humanPlayer.input.spacePressed = false;
 	}
 }
 
 function mouseHandler(e) {
     var rect = canvas.getBoundingClientRect();
     var mouse = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    mouseX = mouse.x;
-    mouseY = mouse.y;
+    humanPlayer.input.mouseX = mouse.x;
+    humanPlayer.input.mouseY = mouse.y;
 }
 
 };
