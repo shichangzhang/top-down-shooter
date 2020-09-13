@@ -4,6 +4,7 @@ window.onload = function(){
 var fps = 60;
 var boardWidth = 800;
 var boardHeight = 600;
+var cooldown = 10;
 
 // Constants
 var LEFT = 65;
@@ -15,6 +16,7 @@ var SPACE = 32;
 // Global vars
 var bullets = [];
 var players = [];
+var bots = [];
 
 var canvas = document.getElementById("myCanvas");
 var ctx = canvas.getContext("2d");
@@ -62,6 +64,8 @@ class Player {
     height = 32;
     speed = 10;
     colour = "red";
+    reloading = false;
+    cooldown = 0;
 
     constructor(x = 0, y = 0) {
         this.position = { x: x, y: y };
@@ -78,10 +82,26 @@ class Player {
         this.position.x = Math.min(Math.max(0, this.position.x), boardWidth);
         this.position.y = Math.min(Math.max(0, this.position.y), boardHeight);
 
-        // Shoot bullet
-        if (this.input.spacePressed) {
-            bullets.push(new Bullet(this));
+        // Reload
+        if (this.reloading) {
+            if (this.cooldown == 0) {
+                this.reloading = false;
+            }
+            this.cooldown -= 1;
         }
+
+        // Shoot bullet
+        if (!this.reloading && this.input.spacePressed) {
+            bullets.push(new Bullet(this));
+            this.reloading = true;
+            this.cooldown = cooldown;
+        }
+    }
+}
+
+class Bot extends Player {
+    updateInputs() {
+        // Overwrite this for each bot
     }
 }
 
@@ -137,6 +157,40 @@ gameLoop();
 var humanPlayer = new Player();
 players.push(humanPlayer);
 
+// Bots
+var botPlayer = new Player();
+players.push(botPlayer);
+bots.push(botPlayer);
+botPlayer.updateInputs = aimBotRandomMover;
+botPlayer.colour = "blue";
+
+// Different bot types
+function aimBotRandomMover() {
+    this.input.spacePressed = true;
+    this.input.mouseX = humanPlayer.position.x;
+    this.input.mouseY = humanPlayer.position.y;
+
+    if (typeof this.target === 'undefined') {
+        this.target = {
+            x: Math.floor(Math.random() * boardWidth),
+            y: Math.floor(Math.random() * boardHeight)
+        };
+    }
+
+    if (distance(this.position, this.target) < 30) {
+        this.target = {
+            x: Math.floor(Math.random() * boardWidth),
+            y: Math.floor(Math.random() * boardHeight)
+        };
+    }
+
+    var diff = { x: Math.abs(this.target.x - this.position.x), y: Math.abs(this.target.y - this.position.y) };
+    this.input.leftPressed = diff.x > 10 && this.position.x > this.target.x;
+    this.input.rightPressed = diff.x > 10 && this.position.x < this.target.x;
+    this.input.upPressed = diff.y > 10 && this.position.y > this.target.y;
+    this.input.downPressed = diff.y > 10 && this.position.y < this.target.y;
+};
+
 // Controls / Input
 document.addEventListener("keydown", keyDownHandler, false);
 document.addEventListener("keyup", keyUpHandler, false);
@@ -183,6 +237,20 @@ function mouseHandler(e) {
     var mouse = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     humanPlayer.input.mouseX = mouse.x;
     humanPlayer.input.mouseY = mouse.y;
+}
+
+// Bot input update loop
+function updateBotInputs() {
+    setTimeout(function() {
+        requestAnimationFrame(updateBotInputs);
+        bots.map(function (bot) { bot.updateInputs(); });
+    }, 1000 / fps);
+}
+updateBotInputs();
+
+// Helper functions
+function distance(a, b) {
+    return Math.sqrt( (a.x - b.x)**2 + (a.y - b.y)**2);
 }
 
 };
