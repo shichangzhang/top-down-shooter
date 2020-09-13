@@ -46,7 +46,7 @@ class Bullet {
 
         this.position = { x: player.position.x, y: player.position.y };
         this.velocity = { x: velocityX * this.speed, y: velocityY * this.speed };
-        this.shooter = player.name;
+        this.shooter = player;
     }
 
     update() {
@@ -67,6 +67,7 @@ class Player {
     colour = "red";
     reloading = false;
     cooldown = 0;
+    score = 0;
 
     constructor(x = 0, y = 0) {
         this.position = { x: x, y: y };
@@ -132,7 +133,8 @@ function detectCollisions() {
     for (var i = 0; i < players.length; i++) {
         for (var j = 0; j < bullets.length; j++) {
             if (collides(players[i], bullets[j])) {
-                console.log(players[i].name, "got shot by", bullets[j].shooter);
+                console.log(players[i].name, "got shot by", bullets[j].shooter.name);
+                bullets[i].shooter.score += 1;
             }
         }
     }
@@ -276,6 +278,15 @@ function clamp(sprite) {
 function collides(a, b) {
     return distance(a.position, b.position) < (a.width/2 + b.width/2);
 }
+
+// UI
+function uiLoop() {
+    setTimeout(function() {
+        requestAnimationFrame(uiLoop);
+        document.getElementById("scoreboard").innerHTML = "Your score: " + humanPlayer.score + "<br>" + "Bot score: " + botPlayer.score;
+    }, 1000 / 20);
+}
+uiLoop();
 
 };
 
