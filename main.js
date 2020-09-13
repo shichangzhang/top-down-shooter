@@ -2,8 +2,7 @@ window.onload = function(){
 
 // Configurable
 var fps = 60;
-var boardWidth = 800;
-var boardHeight = 600;
+var board = { width: 800, height: 600 };
 var cooldown = 10;
 
 // Constants
@@ -55,7 +54,7 @@ class Bullet {
     }
 
     isOut() {
-        return this.position.x < 0 || this.position.y < 0 || this.position.x > boardWidth || this.position.y > boardHeight;
+        return this.position.x < 0 || this.position.y < 0 || this.position.x > board.width || this.position.y > board.height;
     }
 }
 
@@ -79,8 +78,7 @@ class Player {
         this.position.y -= this.input.upPressed ? this.speed : 0;
         this.position.y += this.input.downPressed ? this.speed : 0;
 
-        this.position.x = Math.min(Math.max(0, this.position.x), boardWidth);
-        this.position.y = Math.min(Math.max(0, this.position.y), boardHeight);
+        clamp(this);
 
         // Reload
         if (this.reloading) {
@@ -107,7 +105,7 @@ class Bot extends Player {
 
 function drawSprite(sprite) {
     ctx.beginPath();
-    ctx.rect(sprite.position.x, sprite.position.y, sprite.width, sprite.height);
+    ctx.rect(sprite.position.x - sprite.width/2, sprite.position.y - sprite.height/2, sprite.width, sprite.height);
     ctx.fillStyle = sprite.colour;
     ctx.fill();
     ctx.closePath();
@@ -115,7 +113,7 @@ function drawSprite(sprite) {
 
 function drawBoard() {
     ctx.beginPath();
-    ctx.rect(0, 0, boardWidth, boardHeight);
+    ctx.rect(0, 0, board.width, board.height);
     ctx.fillStyle = "#BBADA0";
     ctx.fill();
     ctx.closePath();
@@ -172,15 +170,15 @@ function aimBotRandomMover() {
 
     if (typeof this.target === 'undefined') {
         this.target = {
-            x: Math.floor(Math.random() * boardWidth),
-            y: Math.floor(Math.random() * boardHeight)
+            x: Math.floor(Math.random() * board.width),
+            y: Math.floor(Math.random() * board.height)
         };
     }
 
     if (distance(this.position, this.target) < 30) {
         this.target = {
-            x: Math.floor(Math.random() * boardWidth),
-            y: Math.floor(Math.random() * boardHeight)
+            x: Math.floor(Math.random() * board.width),
+            y: Math.floor(Math.random() * board.height)
         };
     }
 
@@ -251,6 +249,13 @@ updateBotInputs();
 // Helper functions
 function distance(a, b) {
     return Math.sqrt( (a.x - b.x)**2 + (a.y - b.y)**2);
+}
+
+function clamp(sprite) {
+    var min = { x: sprite.width/2, y: sprite.height/2 };
+    var max = { x: board.width - sprite.width/2, y: board.height - sprite.height/2 };
+    sprite.position.x = Math.min(Math.max(min.x, sprite.position.x), max.x);
+    sprite.position.y = Math.min(Math.max(min.y, sprite.position.y), max.y);
 }
 
 };
