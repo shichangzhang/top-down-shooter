@@ -46,6 +46,7 @@ class Bullet {
 
         this.position = { x: player.position.x, y: player.position.y };
         this.velocity = { x: velocityX * this.speed, y: velocityY * this.speed };
+        this.shooter = player.name;
     }
 
     update() {
@@ -59,6 +60,7 @@ class Bullet {
 }
 
 class Player {
+    name = "No name";
     width = 32;
     height = 32;
     speed = 10;
@@ -125,6 +127,17 @@ function draw() {
     bullets.map(drawSprite);
 }
 
+// Collision
+function detectCollisions() {
+    for (var i = 0; i < players.length; i++) {
+        for (var j = 0; j < bullets.length; j++) {
+            if (collides(players[i], bullets[j])) {
+                console.log(players[i].name, "got shot by", bullets[j].shooter);
+            }
+        }
+    }
+}
+
 // Update functions
 function updateSprite(sprite) {
     sprite.update();
@@ -143,6 +156,7 @@ function update() {
 function gameLoop() {
     setTimeout(function() {
         requestAnimationFrame(gameLoop);
+        detectCollisions();
         update();
         draw();
     }, 1000 / fps);
@@ -153,6 +167,7 @@ gameLoop();
 
 // Players
 var humanPlayer = new Player();
+humanPlayer.name = "You";
 players.push(humanPlayer);
 
 // Bots
@@ -256,6 +271,10 @@ function clamp(sprite) {
     var max = { x: board.width - sprite.width/2, y: board.height - sprite.height/2 };
     sprite.position.x = Math.min(Math.max(min.x, sprite.position.x), max.x);
     sprite.position.y = Math.min(Math.max(min.y, sprite.position.y), max.y);
+}
+
+function collides(a, b) {
+    return distance(a.position, b.position) < (a.width/2 + b.width/2);
 }
 
 };
