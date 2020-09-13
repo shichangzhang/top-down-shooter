@@ -4,6 +4,9 @@ window.onload = function(){
 var fps = 60;
 var board = { width: 800, height: 600 };
 var cooldown = 10;
+var gameLength = 10; // seconds
+var timer = gameLength * fps;
+var winningScore = 10;
 
 // Constants
 var LEFT = 65;
@@ -13,6 +16,7 @@ var DOWN = 83;
 var SPACE = 32;
 
 // Global vars
+var gameOver = false;
 var bullets = [];
 var players = [];
 var bots = [];
@@ -140,6 +144,17 @@ function detectCollisions() {
     }
 }
 
+// Check if game is over
+function checkGameOver() {
+    if (timer <= 0) {
+        gameOver = true;
+    }
+    if (players.filter(function(player) { return player.score >= winningScore; }).length > 0) {
+        gameOver = true;
+    }
+    timer--;
+}
+
 // Update functions
 function updateSprite(sprite) {
     sprite.update();
@@ -157,10 +172,13 @@ function update() {
 
 function gameLoop() {
     setTimeout(function() {
-        requestAnimationFrame(gameLoop);
-        detectCollisions();
-        update();
-        draw();
+        checkGameOver();
+        if (!gameOver) {
+            requestAnimationFrame(gameLoop);
+            detectCollisions();
+            update();
+            draw();
+        }
     }, 1000 / fps);
 }
 
