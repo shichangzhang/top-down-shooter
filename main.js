@@ -9,11 +9,13 @@ var timer = gameLength * fps;
 var winningScore = 10;
 
 // Constants
-var LEFT = 65;
-var UP = 87;
-var RIGHT = 68;
-var DOWN = 83;
+var LEFT = 37;
+var UP = 38;
+var RIGHT = 39;
+var DOWN = 40;
 var SPACE = 32;
+var ROTATE_C = 88;
+var ROTATE_AC = 90;
 
 // Global vars
 var gameOver = false;
@@ -31,22 +33,20 @@ class InputState {
     rightPressed = false;
     downPressed = false;
     spacePressed = false;
+    rotateClockwise = false;
+    rotateAnticlockwise = false;
     mouseX = 0;
     mouseY = 0;
 }
 
 class Bullet {
-    width = 8;
-    height = 8;
+    radius = 4;
     speed = 30;
     colour = "black";
 
     constructor(player) {
-        var velocityX = player.input.mouseX - player.position.x;
-        var velocityY = player.input.mouseY - player.position.y;
-        var hippopotamus = Math.sqrt( velocityX**2 + velocityY**2);
-        velocityX /= hippopotamus;
-        velocityY /= hippopotamus;
+        var velocityX = -Math.sin(player.direction * (Math.PI/180));
+        var velocityY = Math.cos(player.direction * (Math.PI/180));
 
         this.position = { x: player.position.x, y: player.position.y };
         this.velocity = { x: velocityX * this.speed, y: velocityY * this.speed };
@@ -65,13 +65,15 @@ class Bullet {
 
 class Player {
     name = "No name";
-    width = 32;
-    height = 32;
+    radius = 16;
     speed = 10;
+    rotationSpeed = 3;
     colour = "red";
     reloading = false;
     cooldown = 0;
     score = 0;
+    // set 0 as straight down, 90 as straight left (i.e. ticks up clockwise, 0-360)
+    direction = 30;
 
     constructor(x = 0, y = 0) {
         this.position = { x: x, y: y };
@@ -84,6 +86,9 @@ class Player {
         this.position.x += this.input.rightPressed ? this.speed : 0;
         this.position.y -= this.input.upPressed ? this.speed : 0;
         this.position.y += this.input.downPressed ? this.speed : 0;
+        
+        this.direction += this.input.rotateClockwise ? this.rotationSpeed : 0;
+        this.direction -= this.input.rotateAnticlockwise ? this.rotationSpeed : 0;
 
         clamp(this);
 
@@ -111,8 +116,29 @@ class Bot extends Player {
 }
 
 function drawSprite(sprite) {
+    let rotRad = (sprite.direction*Math.PI/180) + Math.PI/2;
+    ctx.fillStyle = sprite.colour;
+    ctx.strokeStyle = 'black';
     ctx.beginPath();
-    ctx.rect(sprite.position.x - sprite.width/2, sprite.position.y - sprite.height/2, sprite.width, sprite.height);
+    ctx.arc(sprite.position.x, sprite.position.y, sprite.radius, rotRad + Math.PI/4, rotRad - Math.PI/4);
+    ctx.quadraticCurveTo(
+        sprite.position.x - sprite.radius*Math.cos(rotRad), 
+        sprite.position.y - sprite.radius*Math.sin(rotRad), 
+        sprite.position.x + sprite.radius*Math.cos(rotRad), 
+        sprite.position.y + sprite.radius*Math.sin(rotRad));
+    ctx.quadraticCurveTo(
+        sprite.position.x - sprite.radius*Math.cos(rotRad), 
+        sprite.position.y - sprite.radius*Math.sin(rotRad), 
+        sprite.position.x + sprite.radius*Math.cos(rotRad + Math.PI/4), 
+        sprite.position.y + sprite.radius*Math.sin(rotRad + Math.PI/4));
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+}
+
+function drawBullet(sprite) {
+    ctx.beginPath();
+    ctx.arc(sprite.position.x, sprite.position.y, sprite.radius, 0, Math.PI*2);
     ctx.fillStyle = sprite.colour;
     ctx.fill();
     ctx.closePath();
@@ -129,7 +155,7 @@ function drawBoard() {
 function draw() {
     drawBoard();
     players.map(drawSprite);
-    bullets.map(drawSprite);
+    bullets.map(drawBullet);
 }
 
 // Collision
@@ -200,8 +226,17 @@ botPlayer.colour = "blue";
 // Different bot types
 function aimBotRandomMover() {
     this.input.spacePressed = true;
-    this.input.mouseX = humanPlayer.position.x;
-    this.input.mouseY = humanPlayer.position.y;
+    // set bot direction
+    let deltaX = this.position.x - humanPlayer.position.x;
+    let deltaY = this.position.y - humanPlayer.position.y;
+    let hypotenuse = Math.sqrt(deltaX**2 + deltaY**2);
+    if (deltaY > 0) {
+        this.direction = (Math.PI - Math.asin(deltaX/hypotenuse)) * (180/Math.PI);
+    } else {
+        this.direction = Math.asin(deltaX/hypotenuse) * (180/Math.PI);
+    }
+
+    
 
     if (typeof this.target === 'undefined') {
         this.target = {
@@ -244,7 +279,13 @@ function keyDownHandler(e) {
 	}
 	else if(e.keyCode == SPACE) {
 		humanPlayer.input.spacePressed = true;
-	}
+    }
+    else if(e.keyCode == ROTATE_C) {
+        humanPlayer.input.rotateClockwise = true;
+    }
+    else if(e.keyCode == ROTATE_AC) {
+        humanPlayer.input.rotateAnticlockwise = true;
+    }
 }
 
 function keyUpHandler(e) {
@@ -262,7 +303,13 @@ function keyUpHandler(e) {
 	}
 	else if(e.keyCode == SPACE) {
 		humanPlayer.input.spacePressed = false;
-	}
+    }
+    else if(e.keyCode == ROTATE_C) {
+        humanPlayer.input.rotateClockwise = false;
+    }
+    else if(e.keyCode == ROTATE_AC) {
+        humanPlayer.input.rotateAnticlockwise = false;
+    }
 }
 
 function mouseHandler(e) {
@@ -287,14 +334,14 @@ function distance(a, b) {
 }
 
 function clamp(sprite) {
-    var min = { x: sprite.width/2, y: sprite.height/2 };
-    var max = { x: board.width - sprite.width/2, y: board.height - sprite.height/2 };
+    var min = { x: sprite.radius, y: sprite.radius };
+    var max = { x: board.width - sprite.radius, y: board.height - sprite.radius };
     sprite.position.x = Math.min(Math.max(min.x, sprite.position.x), max.x);
     sprite.position.y = Math.min(Math.max(min.y, sprite.position.y), max.y);
 }
 
 function collides(a, b) {
-    return distance(a.position, b.position) < (a.width/2 + b.width/2);
+    return distance(a.position, b.position) < (a.radius + b.radius);
 }
 
 // UI
