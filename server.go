@@ -4,6 +4,7 @@ package main
 import (
     "log"
     "net/http"
+    "os"
 
     "github.com/gorilla/websocket"
 )
@@ -34,6 +35,9 @@ func gameServer(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+    if os.Getenv("PORT") != "" {
+        addr = ":" + os.Getenv("PORT")
+    }
     http.HandleFunc("/", gameServer)
     http.ListenAndServe(addr, nil)
 }
