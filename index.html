@@ -8,12 +8,21 @@
 <body>
 <canvas id="myCanvas" width="800" height="600"></canvas>
 <div>
-<p>WASD: move</p>
+<p>Arrow keys: move</p>
 <p>Space: shoot</p>
-<p>Mouse: aim</p>
-<p>Score 10 points to win. One round lasts 10 seconds.</p>
+<p>Z: rotate anti-clockwise</p>
+<p>X: rotate clockwise</p>
 </div>
 <div id="scoreboard"></div>
+<div id="multiplayer">
+<button v-on:click="if(ws_client.ws) { return; } else { ws_client.connect('wss://top-down-shooter-server.herokuapp.com'); }">Join Heroku server</button>
+<button v-on:click="if(ws_client.ws) { return; } else { ws_client.connect('ws://localhost:8080'); }">Join local server</button>
+<div>
+    Name:
+    <input v-model="human.name">
+</div>
+</div>
+<script src="js/vue.min.js"></script>
 <script src="main.js"></script>
 </body>
 </html>

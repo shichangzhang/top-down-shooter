@@ -69,7 +69,7 @@ class Player {
     radius = 16;
     speed = 10;
     rotationSpeed = 3;
-    colour = "red";
+    colour = "yellow";
     reloading = false;
     cooldown = 0;
     score = 0;
@@ -195,6 +195,10 @@ function isBulletIn(bullet) {
 }
 
 function update() {
+    if (ws) {
+        ws.send(humanPlayer.position.x);
+        ws.send(humanPlayer.position.y);
+    }
     players.map(updateSprite);
     bullets.map(updateSprite);
     bullets = bullets.filter(isBulletIn);
@@ -218,6 +222,7 @@ gameLoop();
 // Players
 var humanPlayer = new Player();
 humanPlayer.name = "You";
+humanPlayer.colour = "red";
 players.push(humanPlayer);
 
 // Bots
@@ -360,20 +365,37 @@ function uiLoop() {
 uiLoop();
 
 // Multiplayer
-ws = new WebSocket("ws://localhost:8080");
-ws.onopen = function(e) {
-    console.log("OPEN");
+var ws_client = {};
+
+ws_client.connect = function(server) {
+    ws = new WebSocket(server);
+    ws.onopen = function(e) {
+        console.log("OPEN");
+        ws.send(humanPlayer.name);
+        ws.send(humanPlayer.position.x);
+        ws.send(humanPlayer.position.y);
+    }
+    ws.onclose = function(e) {
+        console.log("CLOSE");
+        ws = null;
+    }
+    ws.onmessage = function(e) {
+        var player_positions = JSON.parse(e.data);
+        players = [humanPlayer, ...player_positions.slice(1).map( p => new Player(p.x, p.y))]
+    }
+    ws.onerror = function(e) {
+        console.log("ERROR: " + e.data);
+        ws = null;
+    }
 }
-ws.onclose = function(e) {
-    console.log("CLOSE");
-    ws = null;
-}
-ws.onmessage = function(e) {
-    console.log("RESPONSE: " + e.data);
-}
-ws.onerror = function(e) {
-    console.log("ERROR: " + e.data);
-}
+
+new Vue({
+    el: '#multiplayer',
+    data: {
+        ws_client: ws_client,
+        human: humanPlayer
+    }
+});
 
 };
 
