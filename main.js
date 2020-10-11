@@ -22,6 +22,7 @@ var gameOver = false;
 var bullets = [];
 var players = [];
 var bots = [];
+var ws; // WebSocket connection
 
 var canvas = document.getElementById("myCanvas");
 var ctx = canvas.getContext("2d");
@@ -172,6 +173,7 @@ function detectCollisions() {
 
 // Check if game is over
 function checkGameOver() {
+    /*
     if (timer <= 0) {
         gameOver = true;
     }
@@ -179,6 +181,8 @@ function checkGameOver() {
         gameOver = true;
     }
     timer--;
+    */
+    return;
 }
 
 // Update functions
@@ -217,11 +221,13 @@ humanPlayer.name = "You";
 players.push(humanPlayer);
 
 // Bots
+/*
 var botPlayer = new Player();
 players.push(botPlayer);
 bots.push(botPlayer);
 botPlayer.updateInputs = aimBotRandomMover;
 botPlayer.colour = "blue";
+*/
 
 // Different bot types
 function aimBotRandomMover() {
@@ -348,10 +354,26 @@ function collides(a, b) {
 function uiLoop() {
     setTimeout(function() {
         requestAnimationFrame(uiLoop);
-        document.getElementById("scoreboard").innerHTML = "Your score: " + humanPlayer.score + "<br>" + "Bot score: " + botPlayer.score;
+        // document.getElementById("scoreboard").innerHTML = "Your score: " + humanPlayer.score + "<br>" + "Bot score: " + botPlayer.score;
     }, 1000 / 20);
 }
 uiLoop();
+
+// Multiplayer
+ws = new WebSocket("ws://localhost:8080");
+ws.onopen = function(e) {
+    console.log("OPEN");
+}
+ws.onclose = function(e) {
+    console.log("CLOSE");
+    ws = null;
+}
+ws.onmessage = function(e) {
+    console.log("RESPONSE: " + e.data);
+}
+ws.onerror = function(e) {
+    console.log("ERROR: " + e.data);
+}
 
 };
 
